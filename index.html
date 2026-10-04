@@ -67,7 +67,6 @@
 </head>
 <body class="min-h-[100dvh] custom-scrollbar text-slate-100 flex flex-col overflow-x-hidden selection:bg-rose-500 selection:text-white">
 
-    <!-- Floating Background Canvas -->
     <canvas id="doodleCanvas"></canvas>
 
     <header class="relative z-10 w-full px-6 py-4 border-b border-white/10 glass-panel flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
@@ -79,7 +78,6 @@
                 <h1 class="text-base font-extrabold tracking-widest uppercase bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">OmniStudy</h1>
             </div>
             
-            <!-- Mute Button Mobile (Hidden on Desktop) -->
             <button id="muteBtnMobile" class="sm:hidden p-2 rounded-lg glass-btn text-white/70 hover:text-white transition">
                 <svg id="icon-sound-on-mobile" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l5 5V5l-5 5H5z"></path></svg>
                 <svg id="icon-sound-off-mobile" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h2.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z m7.414-2.414l3-3m0 0l3-3m-3 3l-3-3m3 3l3 3"></path></svg>
@@ -92,7 +90,6 @@
             <button onclick="switchTab('analytics')" id="nav-analytics" class="px-5 py-2 text-xs font-bold rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition whitespace-nowrap">Analytics</button>
         </div>
 
-        <!-- Mute Button Desktop -->
         <button id="muteBtnDesktop" class="hidden sm:flex p-2.5 rounded-xl glass-btn text-white/70 hover:text-white transition" title="Toggle Click UI Sounds">
             <svg id="icon-sound-on-desktop" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l5 5V5l-5 5H5z"></path></svg>
             <svg id="icon-sound-off-desktop" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h2.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z m7.414-2.414l3-3m0 0l3-3m-3 3l-3-3m3 3l3 3"></path></svg>
@@ -211,19 +208,33 @@
         </main>
     </div>
 
-    <!-- Flashcard Bottom Bar (Now Relative and Scrollable) -->
+    <!-- Flashcard Bottom Bar -->
     <div class="relative mt-auto w-full glass-panel border-t border-white/10 p-4 sm:p-5 z-40 shrink-0">
         <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-4 items-center justify-between text-center md:text-left">
+            
             <div class="flex-1 w-full flex flex-col justify-center">
                 <div class="flex items-center gap-2 justify-center md:justify-start">
                     <span id="flash-icon" class="text-lg"></span>
-                    <h4 class="font-bold text-lg transition-colors duration-500" id="flash-word">Word</h4>
+                    <h4 class="font-bold text-lg transition-colors duration-500" id="flash-word">Loading...</h4>
+                    
+                    <!-- Read Aloud Button -->
+                    <button id="btn-read-aloud" onclick="readAloudFlashcard()" class="ml-2 p-1.5 rounded-full glass-btn text-white/70 hover:text-white transition hidden shadow-sm" title="Read Aloud">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l5 5V5l-5 5H5z"></path></svg>
+                    </button>
                 </div>
-                <p class="text-white/80 font-mono text-sm mt-1 bg-black/20 p-2 rounded-lg inline-block self-center md:self-start border border-white/5" id="flash-phrase">Phrase</p>
+                <p class="text-white/80 font-mono text-sm mt-2 bg-black/20 p-2 rounded-lg inline-block self-center md:self-start border border-white/5" id="flash-phrase">Loading phrase...</p>
             </div>
-            <div class="flex-1 w-full md:border-l border-white/10 md:pl-6 flex items-center justify-center md:justify-start">
-                <p class="text-sm text-white/70 italic leading-relaxed" id="flash-meaning">Meaning</p>
+            
+            <div class="flex-1 w-full md:border-l border-white/10 md:pl-6 flex flex-col items-center justify-center md:items-start gap-3">
+                <p class="text-sm text-white/70 italic leading-relaxed" id="flash-meaning">Loading meaning...</p>
+                
+                <!-- Refresh New Card Button -->
+                <button onclick="updateLabelsAndFlashcards()" class="text-xs font-bold px-4 py-2 rounded-lg glass-btn flex items-center gap-2 hover:bg-white/10 transition mt-1 shadow-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    New Card
+                </button>
             </div>
+
         </div>
     </div>
 
@@ -242,7 +253,7 @@
             window.localStorage.removeItem(testKey);
             storageAvailable = true;
         } catch (e) {
-            console.warn("localStorage disabled. Using in-memory fallback.");
+            console.warn("localStorage disabled.");
         }
 
         const SafeStore = {
@@ -266,45 +277,25 @@
                 name: 'French', icon: '🇫🇷', color: '#c8963e', bg: '#1c1511', 
                 doodles: ['🥐', '🗼', '🍷', '🥖', '🎨', '🧀'],
                 labels: { focus: 'Dans ma bulle', short: 'Petite pause', long: 'Quartier libre' },
-                flashcards: [
-                    { word: 'Flâner', phrase: 'Je vais flâner dans les rues de Paris.', meaning: 'To stroll aimlessly but enjoyably, soaking in the surroundings.' },
-                    { word: 'Dépaysement', phrase: 'Ce voyage offre un vrai dépaysement.', meaning: 'The feeling of being in a new, unfamiliar place; a change of scenery.' },
-                    { word: 'Bricolage', phrase: 'Il aime faire du bricolage le dimanche.', meaning: 'Do-it-yourself projects, tinkering, or DIY.' },
-                    { word: 'Retrouvailles', phrase: 'Les retrouvailles ont été joyeuses.', meaning: 'The happiness of meeting someone again after a long time.' }
-                ]
+                flashcards: [{ word: 'Internet Error', phrase: 'Impossible de se connecter.', meaning: 'Offline fallback mode.' }]
             },
             german: { 
                 name: 'German', icon: '🇩🇪', color: '#f1c40f', bg: '#141414', 
                 doodles: ['🥨', '🍺', '🏰', '🕰️', '🌭', '🏔️'],
                 labels: { focus: 'Im Tunnel', short: 'Kaffeepause', long: 'Feierabend' },
-                flashcards: [
-                    { word: 'Verschlimmbessern', phrase: 'Er hat das Projekt verschlimmbessert.', meaning: 'To accidentally make something worse while trying to improve it.' },
-                    { word: 'Fernweh', phrase: 'Ich habe schreckliches Fernweh.', meaning: 'An ache for distant places; the craving for travel.' },
-                    { word: 'Schadenfreude', phrase: 'Sie konnte ihre Schadenfreude nicht verbergen.', meaning: 'Pleasure derived by someone from another person\'s misfortune.' },
-                    { word: 'Kummerspeck', phrase: 'Nach der Trennung bekam er Kummerspeck.', meaning: 'Excess weight gained from emotional overeating (literally: grief bacon).' }
-                ]
+                flashcards: [{ word: 'Internet Error', phrase: 'Keine Verbindung möglich.', meaning: 'Offline fallback mode.' }]
             },
             korean: { 
                 name: 'Korean', icon: '🇰🇷', color: '#f72585', bg: '#100a17', 
                 doodles: ['🍜', '🏯', '🫰', '🍚', '🥢', '🎎'],
                 labels: { focus: '열공 모드 (Hard Study)', short: '숨 고르기 (Catch Breath)', long: '휴식 시간 (Rest Time)' },
-                flashcards: [
-                    { word: '눈치 (Nunchi)', phrase: '그는 눈치가 빠르다.', meaning: 'The subtle art and ability of assessing others\' moods and social situations.' },
-                    { word: '정 (Jeong)', phrase: '한국인의 정을 느꼈다.', meaning: 'A deep feeling of attachment, bond, and affection between people.' },
-                    { word: '대박 (Daebak)', phrase: '이 영화 완전 대박이야!', meaning: 'Awesome, a big hit, or a great success.' },
-                    { word: '한 (Han)', phrase: '그의 음악에는 한이 서려 있다.', meaning: 'A complex feeling of sorrow, resentment, and hope for overcoming hardship.' }
-                ]
+                flashcards: [{ word: 'Internet Error', phrase: '연결할 수 없습니다.', meaning: 'Offline fallback mode.' }]
             },
             mandarin: { 
                 name: 'Mandarin', icon: '🇨🇳', color: '#e74c3c', bg: '#1a1313', 
                 doodles: ['🏮', '🐉', '🍵', '🥟', '🐼', '🧧'],
                 labels: { focus: '专心致志 (Focus)', short: '喘口气 (Breather)', long: '劳逸结合 (Balance)' },
-                flashcards: [
-                    { word: '加油 (Jiāyóu)', phrase: '考试加油！', meaning: 'Literally "add oil"; used as an encouragement meaning "Come on!" or "You can do it!".' },
-                    { word: '缘分 (Yuánfèn)', phrase: '相遇就是缘分。', meaning: 'Fate or destiny that brings people together.' },
-                    { word: '关系 (Guānxi)', phrase: '做生意需要好关系。', meaning: 'Networks, connections, and social relationships built on mutual trust.' },
-                    { word: '人山人海 (Rénshānrénhǎi)', phrase: '长城上人山人海。', meaning: 'Huge crowds of people (literally: mountains of people, seas of people).' }
-                ]
+                flashcards: [{ word: 'Internet Error', phrase: '无法连接到网络。', meaning: 'Offline fallback mode.' }]
             },
             physics: { 
                 name: 'Physics/Math', icon: '⚛️', color: '#38bdf8', bg: '#0b1120', 
@@ -328,6 +319,13 @@
                     { word: 'Mitosis', phrase: 'Cells divide through mitosis.', meaning: 'A part of the cell cycle where replicated chromosomes are separated into two new nuclei.' }
                 ]
             }
+        };
+
+        const TTS_LANGS = {
+            french: 'fr-FR',
+            german: 'de-DE',
+            korean: 'ko-KR',
+            mandarin: 'zh-CN'
         };
 
         let activeTab = 'timer';
@@ -359,9 +357,7 @@
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 if(AudioContext) audioCtx = new AudioContext();
             }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         }
 
         function playClickSound() {
@@ -370,22 +366,18 @@
                 const t = audioCtx.currentTime;
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(600, t);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, t);
                 osc.frequency.exponentialRampToValueAtTime(200, t + 0.05);
                 gain.gain.setValueAtTime(0.05, t); 
                 gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
-                
                 osc.start(t); osc.stop(t + 0.05);
             } catch(e) { }
         }
 
         document.addEventListener('click', (e) => {
             initAudio();
-            if(e.target.closest('#muteBtnDesktop') || e.target.closest('#muteBtnMobile')) return;
+            if(e.target.closest('#muteBtnDesktop') || e.target.closest('#muteBtnMobile') || e.target.closest('#btn-read-aloud')) return;
             playClickSound();
         });
 
@@ -394,7 +386,6 @@
             isMuted = !isMuted;
             const onIcons = document.querySelectorAll('#icon-sound-on-desktop, #icon-sound-on-mobile');
             const offIcons = document.querySelectorAll('#icon-sound-off-desktop, #icon-sound-off-mobile');
-            
             if (isMuted) {
                 onIcons.forEach(el => el.classList.add('hidden'));
                 offIcons.forEach(el => el.classList.remove('hidden'));
@@ -414,61 +405,99 @@
                 const t = audioCtx.currentTime;
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
+                osc.connect(gain); gain.connect(audioCtx.destination);
 
                 if (type === 'end') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(523.25, t); 
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, t); 
                     osc.frequency.exponentialRampToValueAtTime(880, t + 0.1);
                     gain.gain.setValueAtTime(0, t);
                     gain.gain.linearRampToValueAtTime(0.4, t + 0.05);
                     gain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
                     osc.start(t); osc.stop(t + 1.1);
                 } else if (type === 'soft') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(880, t);
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(880, t);
                     gain.gain.setValueAtTime(0, t);
                     gain.gain.linearRampToValueAtTime(0.15, t + 0.05);
                     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
                     osc.start(t); osc.stop(t + 0.6);
                 }
-            } catch(e) { console.warn("Audio play failed", e); }
+            } catch(e) { }
         }
 
-        function updateLabelsAndFlashcards() {
+        async function updateLabelsAndFlashcards() {
             const theme = THEMES[activeTheme];
             
-            // Buttons
             document.getElementById('mode-focus').innerText = theme.labels.focus;
             document.getElementById('mode-shortBreak').innerText = theme.labels.short;
             document.getElementById('mode-longBreak').innerText = theme.labels.long;
-
-            // Flashcards - Pick a random card from the active theme's array
-            const cards = theme.flashcards;
-            const randomCard = cards[Math.floor(Math.random() * cards.length)];
-            
             document.getElementById('flash-icon').innerText = theme.icon;
-            document.getElementById('flash-word').innerText = randomCard.word;
+
+            const readBtn = document.getElementById('btn-read-aloud');
+            if (TTS_LANGS[activeTheme]) {
+                readBtn.classList.remove('hidden');
+            } else {
+                readBtn.classList.add('hidden');
+            }
+
+            document.getElementById('flash-word').innerText = "Loading...";
             document.getElementById('flash-word').style.color = theme.color;
-            document.getElementById('flash-phrase').innerText = randomCard.phrase;
-            document.getElementById('flash-meaning').innerText = randomCard.meaning;
+            document.getElementById('flash-phrase').innerText = "...";
+            document.getElementById('flash-meaning').innerText = "...";
+
+            let card;
+            if (TTS_LANGS[activeTheme]) {
+                try {
+                    const wikiLangCode = TTS_LANGS[activeTheme].split('-')[0];
+                    const res = await fetch(`https://${wikiLangCode}.wikipedia.org/api/rest_v1/page/random/summary`);
+                    if (!res.ok) throw new Error("API Error");
+                    const data = await res.json();
+                    
+                    let extract = data.extract || "No phrase available.";
+                    if (extract.length > 140) extract = extract.substring(0, 140) + '...';
+                    
+                    card = {
+                        word: data.title,
+                        phrase: extract,
+                        meaning: data.description || "Wikipedia Article"
+                    };
+                } catch(e) {
+                    const cards = theme.flashcards;
+                    card = cards[Math.floor(Math.random() * cards.length)];
+                }
+            } else {
+                const cards = theme.flashcards;
+                card = cards[Math.floor(Math.random() * cards.length)];
+            }
+
+            document.getElementById('flash-word').innerText = card.word;
+            document.getElementById('flash-phrase').innerText = card.phrase;
+            document.getElementById('flash-meaning').innerText = card.meaning;
+        }
+
+        function readAloudFlashcard() {
+            if (!TTS_LANGS[activeTheme]) return;
+            const phraseText = document.getElementById('flash-phrase').innerText;
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(phraseText);
+                utterance.lang = TTS_LANGS[activeTheme];
+                utterance.rate = 0.85; 
+                window.speechSynthesis.speak(utterance);
+            } else {
+                showToast("Audio not supported on this device.");
+            }
         }
 
         function updateUIPlayPause() {
             document.getElementById('icon-play').classList.toggle('hidden', isRunning);
             document.getElementById('icon-pause').classList.toggle('hidden', !isRunning);
-            
             const btn = document.getElementById('btn-play-pause');
-            if(isRunning) {
-                btn.style.boxShadow = `0 0 40px ${THEMES[activeTheme].color}40`;
-            } else {
-                btn.style.boxShadow = '';
-            }
+            if(isRunning) btn.style.boxShadow = `0 0 40px ${THEMES[activeTheme].color}40`;
+            else btn.style.boxShadow = '';
         }
 
         function setTimerMode(mode) {
-            // Save progress if switching away from a partially/fully completed focus session
             if (timerMode === 'focus' && mode !== 'focus' && (timeLeft < MODE_SEC.focus || isOvertime)) {
                 const totalSec = isOvertime ? (MODE_SEC.focus + overtimeElapsed) : (MODE_SEC.focus - timeLeft);
                 const mins = Math.max(1, Math.round(totalSec / 60));
@@ -482,11 +511,7 @@
                 document.getElementById('sessionCounter').innerText = `Session #${completedSessions + 1}`;
             }
 
-            timerMode = mode;
-            isRunning = false;
-            isOvertime = false;
-            overtimeElapsed = 0;
-            timeLeft = MODE_SEC[mode];
+            timerMode = mode; isRunning = false; isOvertime = false; overtimeElapsed = 0; timeLeft = MODE_SEC[mode];
             clearInterval(timerInterval);
 
             ['focus', 'shortBreak', 'longBreak'].forEach(m => {
@@ -504,31 +529,22 @@
             const circle = document.getElementById('progressCircle');
             circle.classList.remove('overtime-pulse');
             
-            updateUIPlayPause();
-            renderTime();
+            updateUIPlayPause(); renderTime();
         }
 
         function toggleTimer() {
             if (isRunning) {
-                isRunning = false;
-                clearInterval(timerInterval);
-                updateUIPlayPause();
-            } else {
-                startTimer();
-            }
+                isRunning = false; clearInterval(timerInterval); updateUIPlayPause();
+            } else { startTimer(); }
         }
 
         function startTimer() {
-            isRunning = true;
-            updateUIPlayPause();
-
+            isRunning = true; updateUIPlayPause();
             timerInterval = setInterval(() => {
                 if (!isOvertime) {
-                    if (timeLeft > 0) {
-                        timeLeft--;
-                    } else {
-                        isOvertime = true;
-                        overtimeElapsed = 0;
+                    if (timeLeft > 0) timeLeft--;
+                    else {
+                        isOvertime = true; overtimeElapsed = 0;
                         document.getElementById('overtimeBadge').classList.remove('hidden');
                         document.getElementById('progressCircle').classList.add('overtime-pulse');
                         playTimerSound('end');
@@ -541,10 +557,7 @@
             }, 1000);
         }
 
-        function resetTimer() {
-            // Resetting active time without logging a finished session
-            setTimerMode(timerMode);
-        }
+        function resetTimer() { setTimerMode(timerMode); }
 
         function renderTime() {
             let m, s, str;
@@ -555,20 +568,14 @@
             if (isOvertime) {
                 m = Math.floor(overtimeElapsed / 60); s = overtimeElapsed % 60;
                 str = `+${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-                
-                timeDisp.classList.add('text-amber-400');
-                circle.style.strokeDashoffset = 0;
+                timeDisp.classList.add('text-amber-400'); circle.style.strokeDashoffset = 0;
             } else {
                 m = Math.floor(timeLeft / 60); s = timeLeft % 60;
                 str = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-                
                 timeDisp.classList.remove('text-amber-400');
-                
                 const progress = timeLeft / MODE_SEC[timerMode];
                 circle.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
-                if(!circle.classList.contains('overtime-pulse')){
-                    circle.style.stroke = THEMES[activeTheme].color;
-                }
+                if(!circle.classList.contains('overtime-pulse')) circle.style.stroke = THEMES[activeTheme].color;
             }
             timeDisp.innerText = str;
         }
@@ -583,11 +590,8 @@
                     btn.classList.remove('hover:bg-white/10', 'text-white/70');
                     view.classList.remove('hidden-tab');
                     
-                    // Trigger reflow to restart fade-in animation
-                    void view.offsetWidth;
-                    view.style.animation = 'none';
-                    void view.offsetWidth;
-                    view.style.animation = null;
+                    void view.offsetWidth; view.style.animation = 'none';
+                    void view.offsetWidth; view.style.animation = null;
                 } else {
                     btn.classList.remove('bg-white/20', 'shadow', 'text-white');
                     btn.classList.add('hover:bg-white/10', 'text-white/70');
@@ -613,15 +617,10 @@
 
             updateLabelsAndFlashcards();
             
-            if (!isOvertime) {
-                document.getElementById('progressCircle').style.stroke = theme.color;
-            }
+            if (!isOvertime) document.getElementById('progressCircle').style.stroke = theme.color;
             
-            // Update active mode button color
             const activeModeBtn = document.getElementById(`mode-${timerMode}`);
-            if (activeModeBtn) {
-                activeModeBtn.style.backgroundColor = theme.color;
-            }
+            if (activeModeBtn) activeModeBtn.style.backgroundColor = theme.color;
 
             spawnDoodles(); 
         }
@@ -646,9 +645,7 @@
         }
 
         function runFromSched(key) {
-            setTheme(key);
-            switchTab('timer');
-            setTimerMode('focus');
+            setTheme(key); switchTab('timer'); setTimerMode('focus');
         }
 
         function renderSchedule() {
@@ -720,36 +717,26 @@
             if (activeTab !== 'analytics') return;
             const data = getChartData();
 
-            // Pie Chart
             const pieSetup = setupHighDPICanvas('pieChart');
-            const pCtx = pieSetup.ctx;
-            const pW = pieSetup.width;
-            const pH = pieSetup.height;
-            
+            const pCtx = pieSetup.ctx; const pW = pieSetup.width; const pH = pieSetup.height;
             pCtx.clearRect(0, 0, pW, pH);
             const total = Object.values(data).reduce((a,b)=>a+b,0);
             
-            const cx = pW * 0.35; 
-            const cy = pH / 2;
-            const r = Math.min(cx, cy) - 20;
+            const cx = pW * 0.35; const cy = pH / 2; const r = Math.min(cx, cy) - 20;
             let start = -Math.PI/2;
             let legendY = (pH - (Object.keys(data).filter(k => data[k]>0).length * 25)) / 2;
             if(legendY < 10) legendY = 20;
 
             if (total === 0) {
-                pCtx.fillStyle = 'rgba(255,255,255,0.05)';
-                pCtx.beginPath(); pCtx.arc(pW/2, pH/2, r, 0, Math.PI*2); pCtx.fill();
+                pCtx.fillStyle = 'rgba(255,255,255,0.05)'; pCtx.beginPath(); pCtx.arc(pW/2, pH/2, r, 0, Math.PI*2); pCtx.fill();
                 pCtx.fillStyle = 'rgba(255,255,255,0.4)'; pCtx.font = 'bold 12px sans-serif'; 
-                pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
-                pCtx.fillText('No Data', pW/2, pH/2);
+                pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle'; pCtx.fillText('No Data', pW/2, pH/2);
             } else {
                 Object.entries(data).forEach(([k,v]) => {
                     if (v > 0) {
                         const slice = (v/total)*Math.PI*2;
-                        pCtx.beginPath(); pCtx.moveTo(cx, cy);
-                        pCtx.arc(cx, cy, r, start, start+slice); pCtx.closePath();
+                        pCtx.beginPath(); pCtx.moveTo(cx, cy); pCtx.arc(cx, cy, r, start, start+slice); pCtx.closePath();
                         pCtx.fillStyle = THEMES[k].color; pCtx.fill();
-                        
                         pCtx.lineWidth = 1; pCtx.strokeStyle = '#1e293b'; pCtx.stroke();
                         start += slice;
 
@@ -764,99 +751,56 @@
                 });
             }
 
-            // Bar Chart
             const barSetup = setupHighDPICanvas('barChart');
-            const bCtx = barSetup.ctx;
-            const bW = barSetup.width;
-            const bH = barSetup.height;
-
+            const bCtx = barSetup.ctx; const bW = barSetup.width; const bH = barSetup.height;
             bCtx.clearRect(0, 0, bW, bH);
-            const vals = Object.values(data);
-            const max = Math.max(...vals, 10);
+            const vals = Object.values(data); const max = Math.max(...vals, 10);
             
-            const padX = 30;
-            const padY = 30;
-            const chartH = bH - padY * 2;
-            const chartW = bW - padX * 2;
-
+            const padX = 30; const padY = 30; const chartH = bH - padY * 2; const chartW = bW - padX * 2;
             bCtx.strokeStyle = 'rgba(255,255,255,0.1)'; bCtx.lineWidth = 2;
             bCtx.beginPath(); bCtx.moveTo(padX, bH - padY); bCtx.lineTo(bW - padX, bH - padY); bCtx.stroke();
 
-            const keys = Object.keys(data);
-            const gap = chartW / keys.length;
-            const barW = gap * 0.5;
-
+            const keys = Object.keys(data); const gap = chartW / keys.length; const barW = gap * 0.5;
             keys.forEach((k, i) => {
-                const h = (data[k]/max) * chartH;
-                const x = padX + (i*gap) + (gap-barW)/2;
-                const y = bH - padY - h;
-
+                const h = (data[k]/max) * chartH; const x = padX + (i*gap) + (gap-barW)/2; const y = bH - padY - h;
                 if (data[k] > 0) {
-                    bCtx.fillStyle = THEMES[k].color;
-                    bCtx.beginPath(); bCtx.roundRect(x, y, barW, h, [4, 4, 0, 0]); bCtx.fill();
-                    
-                    bCtx.fillStyle = '#fff'; bCtx.font = 'bold 11px sans-serif'; bCtx.textAlign = 'center';
-                    bCtx.fillText(data[k], x + barW/2, y - 6);
+                    bCtx.fillStyle = THEMES[k].color; bCtx.beginPath(); bCtx.roundRect(x, y, barW, h, [4, 4, 0, 0]); bCtx.fill();
+                    bCtx.fillStyle = '#fff'; bCtx.font = 'bold 11px sans-serif'; bCtx.textAlign = 'center'; bCtx.fillText(data[k], x + barW/2, y - 6);
                 }
-                bCtx.fillStyle = 'rgba(255,255,255,0.6)'; bCtx.font = '14px sans-serif'; bCtx.textAlign = 'center';
-                bCtx.fillText(THEMES[k].icon, x + barW/2, bH - padY + 20);
+                bCtx.fillStyle = 'rgba(255,255,255,0.6)'; bCtx.font = '14px sans-serif'; bCtx.textAlign = 'center'; bCtx.fillText(THEMES[k].icon, x + barW/2, bH - padY + 20);
             });
         }
 
         const bgCanvas = document.getElementById('doodleCanvas');
         const bgCtx = bgCanvas.getContext('2d');
-        let doodles = [];
-        let animFrameId = null;
+        let doodles = []; let animFrameId = null;
 
         class Doodle {
             constructor(w, h, themeData) {
-                this.x = Math.random() * w;
-                this.y = Math.random() * h;
-                this.size = Math.random() * 20 + 20; 
-                this.rotation = Math.random() * Math.PI * 2;
-                
-                this.dx = (Math.random() - 0.5) * 0.4;
-                this.dy = (Math.random() - 0.5) * 0.4;
+                this.x = Math.random() * w; this.y = Math.random() * h;
+                this.size = Math.random() * 20 + 20; this.rotation = Math.random() * Math.PI * 2;
+                this.dx = (Math.random() - 0.5) * 0.4; this.dy = (Math.random() - 0.5) * 0.4;
                 this.dr = (Math.random() - 0.5) * 0.01;
-                
                 this.char = themeData.doodles[Math.floor(Math.random() * themeData.doodles.length)];
                 this.color = themeData.color;
             }
-
             update(w, h) {
-                this.x += this.dx;
-                this.y += this.dy;
-                this.rotation += this.dr;
-
-                if (this.x < -50) this.x = w + 50;
-                if (this.x > w + 50) this.x = -50;
-                if (this.y < -50) this.y = h + 50;
-                if (this.y > h + 50) this.y = -50;
+                this.x += this.dx; this.y += this.dy; this.rotation += this.dr;
+                if (this.x < -50) this.x = w + 50; if (this.x > w + 50) this.x = -50;
+                if (this.y < -50) this.y = h + 50; if (this.y > h + 50) this.y = -50;
             }
-
             draw(ctx) {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.rotation);
-                
-                ctx.fillStyle = this.color;
-                ctx.globalAlpha = 0.06; 
-                ctx.font = `${this.size}px sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = 10;
-                
-                ctx.fillText(this.char, 0, 0);
-                ctx.restore();
+                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
+                ctx.fillStyle = this.color; ctx.globalAlpha = 0.06; 
+                ctx.font = `${this.size}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.shadowColor = this.color; ctx.shadowBlur = 10;
+                ctx.fillText(this.char, 0, 0); ctx.restore();
             }
         }
 
         function resizeBackgroundCanvas() {
             const dpr = window.devicePixelRatio || 1;
-            bgCanvas.width = window.innerWidth * dpr;
-            bgCanvas.height = window.innerHeight * dpr;
+            bgCanvas.width = window.innerWidth * dpr; bgCanvas.height = window.innerHeight * dpr;
             bgCtx.scale(dpr, dpr);
             if(activeTab === 'analytics') renderCharts();
         }
@@ -864,30 +808,18 @@
         function spawnDoodles() {
             const themeData = THEMES[activeTheme];
             const count = Math.min(Math.floor((window.innerWidth * window.innerHeight) / 15000), 80);
-            
             doodles = [];
-            for (let i = 0; i < count; i++) {
-                doodles.push(new Doodle(window.innerWidth, window.innerHeight, themeData));
-            }
+            for (let i = 0; i < count; i++) doodles.push(new Doodle(window.innerWidth, window.innerHeight, themeData));
         }
 
         function animateDoodles() {
             bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            
-            doodles.forEach(d => {
-                d.update(w, h);
-                d.draw(bgCtx);
-            });
-            
+            const w = window.innerWidth; const h = window.innerHeight;
+            doodles.forEach(d => { d.update(w, h); d.draw(bgCtx); });
             animFrameId = requestAnimationFrame(animateDoodles);
         }
 
-        window.addEventListener('resize', () => {
-            resizeBackgroundCanvas();
-            spawnDoodles();
-        });
+        window.addEventListener('resize', () => { resizeBackgroundCanvas(); spawnDoodles(); });
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -898,11 +830,8 @@
 
         window.onload = () => {
             document.getElementById('sessionCounter').innerText = `Session #${completedSessions + 1}`;
-            setTheme('french'); 
-            setTimerMode('focus');
-            resizeBackgroundCanvas();
-            spawnDoodles();
-            animateDoodles();
+            setTheme('french'); setTimerMode('focus');
+            resizeBackgroundCanvas(); spawnDoodles(); animateDoodles();
         };
     </script>
 </body>
