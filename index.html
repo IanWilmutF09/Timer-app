@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -65,7 +65,7 @@
         #toast.show { visibility: visible; opacity: 1; }
     </style>
 </head>
-<body class="h-full text-slate-100 flex flex-col overflow-x-hidden selection:bg-rose-500 selection:text-white pb-24">
+<body class="min-h-[100dvh] custom-scrollbar text-slate-100 flex flex-col overflow-x-hidden selection:bg-rose-500 selection:text-white">
 
     <!-- Floating Background Canvas -->
     <canvas id="doodleCanvas"></canvas>
@@ -108,7 +108,7 @@
         <button onclick="setTheme('science')" id="theme-science" class="theme-btn px-4 py-1.5 text-xs font-semibold rounded-full glass-btn flex items-center gap-2 whitespace-nowrap shadow-sm">🧪 Science</button>
     </div>
 
-    <div class="relative z-10 flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center p-4 w-full">
+    <div class="relative z-10 flex-1 flex flex-col items-center p-4 w-full">
         <main id="tab-timer" class="w-full max-w-3xl flex flex-col items-center mt-4 sm:mt-12 fade-in">
             <div class="glass-panel p-2 rounded-2xl flex gap-1 w-full max-w-xl mb-10 shadow-2xl flex-wrap sm:flex-nowrap">
                 <button onclick="setTimerMode('focus')" id="mode-focus" class="flex-1 min-w-[120px] py-2.5 px-2 text-xs md:text-sm font-bold rounded-xl transition shadow text-white">Focus (25m)</button>
@@ -131,7 +131,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-6 mt-12">
+            <div class="flex items-center gap-6 mt-12 mb-8">
                 <button onclick="toggleTimer()" id="btn-play-pause" class="w-20 h-20 rounded-full bg-white text-slate-900 flex items-center justify-center text-3xl shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-all">
                     <svg id="icon-play" class="w-10 h-10 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     <svg id="icon-pause" class="w-10 h-10 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
@@ -142,7 +142,7 @@
             </div>
         </main>
 
-        <main id="tab-schedule" class="w-full max-w-4xl hidden-tab flex flex-col fade-in mt-4">
+        <main id="tab-schedule" class="w-full max-w-4xl hidden-tab flex flex-col fade-in mt-4 mb-8">
             <div class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl mb-6 border border-white/10">
                 <div class="flex items-center gap-3 mb-2">
                     <span class="text-2xl">📅</span>
@@ -179,7 +179,7 @@
             </div>
         </main>
 
-        <main id="tab-analytics" class="w-full max-w-5xl hidden-tab flex flex-col gap-6 fade-in mt-4">
+        <main id="tab-analytics" class="w-full max-w-5xl hidden-tab flex flex-col gap-6 fade-in mt-4 mb-8">
             <div class="glass-panel rounded-3xl p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4 border border-white/10">
                 <div>
                     <h2 class="text-2xl font-bold tracking-wide flex items-center gap-3"><span class="text-2xl">📊</span> Insights</h2>
@@ -211,7 +211,8 @@
         </main>
     </div>
 
-    <div class="fixed bottom-0 left-0 w-full glass-panel border-t border-white/10 p-4 sm:p-5 z-40">
+    <!-- Flashcard Bottom Bar (Now Relative and Scrollable) -->
+    <div class="relative mt-auto w-full glass-panel border-t border-white/10 p-4 sm:p-5 z-40 shrink-0">
         <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-4 items-center justify-between text-center md:text-left">
             <div class="flex-1 w-full flex flex-col justify-center">
                 <div class="flex items-center gap-2 justify-center md:justify-start">
@@ -265,37 +266,67 @@
                 name: 'French', icon: '🇫🇷', color: '#c8963e', bg: '#1c1511', 
                 doodles: ['🥐', '🗼', '🍷', '🥖', '🎨', '🧀'],
                 labels: { focus: 'Dans ma bulle', short: 'Petite pause', long: 'Quartier libre' },
-                flashcard: { word: 'Flâner', phrase: 'Je vais flâner dans les rues de Paris.', meaning: 'To stroll aimlessly but enjoyably, soaking in the surroundings.' }
+                flashcards: [
+                    { word: 'Flâner', phrase: 'Je vais flâner dans les rues de Paris.', meaning: 'To stroll aimlessly but enjoyably, soaking in the surroundings.' },
+                    { word: 'Dépaysement', phrase: 'Ce voyage offre un vrai dépaysement.', meaning: 'The feeling of being in a new, unfamiliar place; a change of scenery.' },
+                    { word: 'Bricolage', phrase: 'Il aime faire du bricolage le dimanche.', meaning: 'Do-it-yourself projects, tinkering, or DIY.' },
+                    { word: 'Retrouvailles', phrase: 'Les retrouvailles ont été joyeuses.', meaning: 'The happiness of meeting someone again after a long time.' }
+                ]
             },
             german: { 
                 name: 'German', icon: '🇩🇪', color: '#f1c40f', bg: '#141414', 
                 doodles: ['🥨', '🍺', '🏰', '🕰️', '🌭', '🏔️'],
                 labels: { focus: 'Im Tunnel', short: 'Kaffeepause', long: 'Feierabend' },
-                flashcard: { word: 'Verschlimmbessern', phrase: 'Er hat das Projekt verschlimmbessert.', meaning: 'To accidentally make something worse while trying to improve it.' }
+                flashcards: [
+                    { word: 'Verschlimmbessern', phrase: 'Er hat das Projekt verschlimmbessert.', meaning: 'To accidentally make something worse while trying to improve it.' },
+                    { word: 'Fernweh', phrase: 'Ich habe schreckliches Fernweh.', meaning: 'An ache for distant places; the craving for travel.' },
+                    { word: 'Schadenfreude', phrase: 'Sie konnte ihre Schadenfreude nicht verbergen.', meaning: 'Pleasure derived by someone from another person\'s misfortune.' },
+                    { word: 'Kummerspeck', phrase: 'Nach der Trennung bekam er Kummerspeck.', meaning: 'Excess weight gained from emotional overeating (literally: grief bacon).' }
+                ]
             },
             korean: { 
                 name: 'Korean', icon: '🇰🇷', color: '#f72585', bg: '#100a17', 
                 doodles: ['🍜', '🏯', '🫰', '🍚', '🥢', '🎎'],
                 labels: { focus: '열공 모드 (Hard Study)', short: '숨 고르기 (Catch Breath)', long: '휴식 시간 (Rest Time)' },
-                flashcard: { word: '눈치 (Nunchi)', phrase: '그는 눈치가 빠르다.', meaning: 'The subtle art and ability of assessing others\' moods and social situations.' }
+                flashcards: [
+                    { word: '눈치 (Nunchi)', phrase: '그는 눈치가 빠르다.', meaning: 'The subtle art and ability of assessing others\' moods and social situations.' },
+                    { word: '정 (Jeong)', phrase: '한국인의 정을 느꼈다.', meaning: 'A deep feeling of attachment, bond, and affection between people.' },
+                    { word: '대박 (Daebak)', phrase: '이 영화 완전 대박이야!', meaning: 'Awesome, a big hit, or a great success.' },
+                    { word: '한 (Han)', phrase: '그의 음악에는 한이 서려 있다.', meaning: 'A complex feeling of sorrow, resentment, and hope for overcoming hardship.' }
+                ]
             },
             mandarin: { 
                 name: 'Mandarin', icon: '🇨🇳', color: '#e74c3c', bg: '#1a1313', 
                 doodles: ['🏮', '🐉', '🍵', '🥟', '🐼', '🧧'],
                 labels: { focus: '专心致志 (Focus)', short: '喘口气 (Breather)', long: '劳逸结合 (Balance)' },
-                flashcard: { word: '加油 (Jiāyóu)', phrase: '考试加油！', meaning: 'Literally "add oil"; used as an encouragement meaning "Come on!" or "You can do it!".' }
+                flashcards: [
+                    { word: '加油 (Jiāyóu)', phrase: '考试加油！', meaning: 'Literally "add oil"; used as an encouragement meaning "Come on!" or "You can do it!".' },
+                    { word: '缘分 (Yuánfèn)', phrase: '相遇就是缘分。', meaning: 'Fate or destiny that brings people together.' },
+                    { word: '关系 (Guānxi)', phrase: '做生意需要好关系。', meaning: 'Networks, connections, and social relationships built on mutual trust.' },
+                    { word: '人山人海 (Rénshānrénhǎi)', phrase: '长城上人山人海。', meaning: 'Huge crowds of people (literally: mountains of people, seas of people).' }
+                ]
             },
             physics: { 
                 name: 'Physics/Math', icon: '⚛️', color: '#38bdf8', bg: '#0b1120', 
                 doodles: ['∑', 'π', 'E=mc²', '∆', '√', '∞'],
                 labels: { focus: 'Deep Work', short: 'Short Break', long: 'Long Break' },
-                flashcard: { word: 'Quotient Rule', phrase: "(u/v)' = (u(1)v - uv(1)) / v²", meaning: 'A formal rule for differentiating problems where one function is divided by another, using u(1) and v(1) as derivatives.' }
+                flashcards: [
+                    { word: 'Quotient Rule', phrase: "(u/v)' = (u(1)v - uv(1)) / v²", meaning: 'A formal rule for differentiating problems where one function is divided by another.' },
+                    { word: 'Product Rule', phrase: "(uv)' = u(1)v + uv(1)", meaning: 'A formula used to find the derivatives of products of two or more functions.' },
+                    { word: 'Chain Rule', phrase: "d/dx [f(g(x))] = f(1)(g(x))g(1)(x)", meaning: 'Formula to compute the derivative of a composite function.' },
+                    { word: 'Euler\'s Identity', phrase: "e^(iπ) + 1 = 0", meaning: 'A beautiful equation connecting five fundamental mathematical constants.' }
+                ]
             },
             science: { 
                 name: 'Science', icon: '🧪', color: '#34d399', bg: '#081c15', 
                 doodles: ['🔬', '🧬', '🔭', '⚗️', '🦠', '⚛️'],
                 labels: { focus: 'Research Phase', short: 'Short Break', long: 'System Reset' },
-                flashcard: { word: 'Entropy', phrase: 'ΔS ≥ 0', meaning: 'The measure of a system\'s thermal energy per unit temperature that is unavailable for doing useful work; degree of disorder.' }
+                flashcards: [
+                    { word: 'Entropy', phrase: 'ΔS ≥ 0', meaning: 'The measure of a system\'s thermal energy per unit temperature that is unavailable for doing useful work; degree of disorder.' },
+                    { word: 'Catalyst', phrase: 'Enzymes act as biological catalysts.', meaning: 'A substance that increases the rate of a chemical reaction without itself undergoing any permanent chemical change.' },
+                    { word: 'Homeostasis', phrase: 'Sweating is a mechanism of homeostasis.', meaning: 'The state of steady internal, physical, and chemical conditions maintained by living systems.' },
+                    { word: 'Mitosis', phrase: 'Cells divide through mitosis.', meaning: 'A part of the cell cycle where replicated chromosomes are separated into two new nuclei.' }
+                ]
             }
         };
 
@@ -408,15 +439,20 @@
         function updateLabelsAndFlashcards() {
             const theme = THEMES[activeTheme];
             
+            // Buttons
             document.getElementById('mode-focus').innerText = theme.labels.focus;
             document.getElementById('mode-shortBreak').innerText = theme.labels.short;
             document.getElementById('mode-longBreak').innerText = theme.labels.long;
 
+            // Flashcards - Pick a random card from the active theme's array
+            const cards = theme.flashcards;
+            const randomCard = cards[Math.floor(Math.random() * cards.length)];
+            
             document.getElementById('flash-icon').innerText = theme.icon;
-            document.getElementById('flash-word').innerText = theme.flashcard.word;
+            document.getElementById('flash-word').innerText = randomCard.word;
             document.getElementById('flash-word').style.color = theme.color;
-            document.getElementById('flash-phrase').innerText = theme.flashcard.phrase;
-            document.getElementById('flash-meaning').innerText = theme.flashcard.meaning;
+            document.getElementById('flash-phrase').innerText = randomCard.phrase;
+            document.getElementById('flash-meaning').innerText = randomCard.meaning;
         }
 
         function updateUIPlayPause() {
