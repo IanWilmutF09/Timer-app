@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OmniStudy Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            transition: background-color 0.8s ease; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background-color: #1c1511; 
+        }
+
+        #doodleCanvas {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: -1;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+        .hidden-tab { display: none !important; }
+
+        @keyframes overtimePulse {
+            0% { filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4)); stroke: rgba(251, 191, 36, 0.8); }
+            50% { filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.9)); stroke: rgba(251, 191, 36, 1); }
+            100% { filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4)); stroke: rgba(251, 191, 36, 0.8); }
+        }
+        .overtime-pulse {
+            animation: overtimePulse 2s infinite ease-in-out;
+            color: #fbbf24 !important; 
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+
+        #toast {
+            visibility: hidden; opacity: 0; transition: visibility 0s, opacity 0.3s linear;
+        }
+        #toast.show { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body class="h-full text-slate-100 flex flex-col overflow-x-hidden selection:bg-rose-500 selection:text-white pb-24">
+
+    <!-- Floating Background Canvas -->
+    <canvas id="doodleCanvas"></canvas>
+
+    <header class="relative z-10 w-full px-6 py-4 border-b border-white/10 glass-panel flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+        <div class="flex items-center justify-between w-full sm:w-auto">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center shadow-inner border border-white/10">
+                    <svg class="w-5 h-5 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h1 class="text-base font-extrabold tracking-widest uppercase bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">OmniStudy</h1>
+            </div>
+            
+            <!-- Mute Button Mobile (Hidden on Desktop) -->
+            <button id="muteBtnMobile" class="sm:hidden p-2 rounded-lg glass-btn text-white/70 hover:text-white transition">
+                <svg id="icon-sound-on-mobile" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l5 5V5l-5 5H5z"></path></svg>
+                <svg id="icon-sound-off-mobile" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h2.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z m7.414-2.414l3-3m0 0l3-3m-3 3l-3-3m3 3l3 3"></path></svg>
+            </button>
+        </div>
+
+        <div class="flex bg-black/40 p-1.5 rounded-xl w-full sm:w-auto justify-center gap-1 overflow-x-auto shadow-inner border border-white/5">
+            <button onclick="switchTab('timer')" id="nav-timer" class="px-5 py-2 text-xs font-bold rounded-lg bg-white/20 shadow text-white transition whitespace-nowrap">Timer</button>
+            <button onclick="switchTab('schedule')" id="nav-schedule" class="px-5 py-2 text-xs font-bold rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition whitespace-nowrap">Schedule</button>
+            <button onclick="switchTab('analytics')" id="nav-analytics" class="px-5 py-2 text-xs font-bold rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition whitespace-nowrap">Analytics</button>
+        </div>
+
+        <!-- Mute Button Desktop -->
+        <button id="muteBtnDesktop" class="hidden sm:flex p-2.5 rounded-xl glass-btn text-white/70 hover:text-white transition" title="Toggle Click UI Sounds">
+            <svg id="icon-sound-on-desktop" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l5 5V5l-5 5H5z"></path></svg>
+            <svg id="icon-sound-off-desktop" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h2.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z m7.414-2.414l3-3m0 0l3-3m-3 3l-3-3m3 3l3 3"></path></svg>
+        </button>
+    </header>
+
+    <div class="relative z-10 w-full glass-panel border-b border-white/5 py-3 px-4 overflow-x-auto custom-scrollbar flex items-center justify-start sm:justify-center gap-3 shrink-0">
+        <button onclick="setTheme('french')" id="theme-french" class="theme-btn px-4 py-1.5 text-xs font-semibold rounded-full glass-btn flex items-center gap-2 whitespace-nowrap shadow-sm">🇫🇷 French</button>
+        <button onclick="setTheme('german')" id="theme-german" class="theme-btn px-4 py-1.5 text-xs font-semibold rounded-full glass-btn flex items-center gap-2 whitespace-nowrap shadow-sm">🇩🇪 German</button>
+        <button onclick="setTheme('korean')" id="theme-korean" class="theme-btn px-4 py-1.5 text-xs font-semibold rounded-full glass-btn flex items-center gap-2 whitespace-nowrap shadow-sm">🇰🇷 Korean</button>
+        <button onclick="setTheme('mandarin')" id="theme-mandarin" class="theme-btn px-4 py-1.5 text-xs font-semibold rounded-full glass-btn flex items-center gap-2 whitespace-nowrap shadow-sm">🇨🇳 Mandarin</button>
+        <button onclick="setTheme('physics')" id="theme-physics" class="theme-btn px-4 py-1.5 text-xs font-semibold rounded-full glass-btn flex items-center gap-2 whitespace-nowrap shadow-sm">⚛️ Physics/Math</button>
+        <button onclick="setTheme('science')" id="theme-science" class="theme-btn px-4 py-1.5 text-xs font-semibold rounded-full glass-btn flex items-center gap-2 whitespace-nowrap shadow-sm">🧪 Science</button>
+    </div>
+
+    <div class="relative z-10 flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center p-4 w-full">
+        <main id="tab-timer" class="w-full max-w-3xl flex flex-col items-center mt-4 sm:mt-12 fade-in">
+            <div class="glass-panel p-2 rounded-2xl flex gap-1 w-full max-w-xl mb-10 shadow-2xl flex-wrap sm:flex-nowrap">
+                <button onclick="setTimerMode('focus')" id="mode-focus" class="flex-1 min-w-[120px] py-2.5 px-2 text-xs md:text-sm font-bold rounded-xl transition shadow text-white">Focus (25m)</button>
+                <button onclick="setTimerMode('shortBreak')" id="mode-shortBreak" class="flex-1 min-w-[120px] py-2.5 px-2 text-xs md:text-sm font-bold rounded-xl transition hover:bg-white/10 text-white/70">Short Break</button>
+                <button onclick="setTimerMode('longBreak')" id="mode-longBreak" class="flex-1 min-w-[120px] py-2.5 px-2 text-xs md:text-sm font-bold rounded-xl transition hover:bg-white/10 text-white/70">Long Break</button>
+            </div>
+
+            <div class="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center rounded-full glass-panel shadow-2xl border-4 border-white/5">
+                <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none drop-shadow-lg" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="47" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2" />
+                    <circle id="progressCircle" cx="50" cy="50" r="47" fill="none" stroke="#c8963e" stroke-width="2"
+                            stroke-linecap="round" stroke-dasharray="295.31" stroke-dashoffset="0"
+                            class="transition-all duration-1000 ease-linear" />
+                </svg>
+
+                <div class="absolute inset-0 flex flex-col items-center justify-center z-10">
+                    <span id="overtimeBadge" class="hidden text-[10px] font-black uppercase tracking-widest text-amber-400 bg-amber-400/10 border border-amber-400/30 px-3 py-1 rounded-full mb-3 animate-pulse shadow-[0_0_15px_rgba(251,191,36,0.2)]">Overtime</span>
+                    <span id="timeDisplay" class="text-6xl sm:text-7xl font-extrabold font-mono tracking-tighter drop-shadow-2xl text-white transition-colors duration-500">25:00</span>
+                    <span id="sessionCounter" class="mt-4 text-xs font-semibold tracking-wide text-white/60 bg-black/30 px-3 py-1 rounded-full border border-white/5">Session #1</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-6 mt-12">
+                <button onclick="toggleTimer()" id="btn-play-pause" class="w-20 h-20 rounded-full bg-white text-slate-900 flex items-center justify-center text-3xl shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 transition-all">
+                    <svg id="icon-play" class="w-10 h-10 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="icon-pause" class="w-10 h-10 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+                <button onclick="resetTimer()" class="w-14 h-14 rounded-full glass-btn flex items-center justify-center text-lg hover:scale-105 active:scale-90 transition-all shadow-lg">
+                    <svg class="w-6 h-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+        </main>
+
+        <main id="tab-schedule" class="w-full max-w-4xl hidden-tab flex flex-col fade-in mt-4">
+            <div class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl mb-6 border border-white/10">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="text-2xl">📅</span>
+                    <h2 class="text-2xl font-bold tracking-wide">Study Planner</h2>
+                </div>
+                <p class="text-sm text-white/60 mb-8 font-medium">Design your optimal learning schedule.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <select id="schedDay" class="bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-sm font-semibold text-white outline-none focus:border-white/50 transition [&>option]:bg-slate-900">
+                        <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option><option value="Saturday">Saturday</option>
+                        <option value="Sunday">Sunday</option>
+                    </select>
+                    <select id="schedTheme" class="bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-sm font-semibold text-white outline-none focus:border-white/50 transition md:col-span-2 [&>option]:bg-slate-900">
+                        <option value="french">🇫🇷 French</option><option value="german">🇩🇪 German</option>
+                        <option value="korean">🇰🇷 Korean</option><option value="mandarin">🇨🇳 Mandarin</option>
+                        <option value="physics">⚛️ Physics/Math</option><option value="science">🧪 Science</option>
+                    </select>
+                    <div class="flex gap-3">
+                        <input type="number" id="schedHours" min="0.5" step="0.5" placeholder="Hrs" class="w-20 bg-black/40 border border-white/20 rounded-xl px-3 py-3 text-sm font-bold text-white text-center outline-none focus:border-white/50 transition">
+                        <button onclick="addToSchedule()" class="flex-1 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white rounded-xl text-sm font-bold transition shadow-lg flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl min-h-[300px] border border-white/10">
+                <h3 class="text-sm font-bold mb-6 text-white/50 uppercase tracking-widest border-b border-white/10 pb-3">Your Schedule</h3>
+                <div id="scheduleContainer" class="space-y-6">
+                    <div class="text-center text-sm font-medium text-white/40 py-16" id="emptyScheduleMsg">Schedule is empty. Start planning above.</div>
+                </div>
+            </div>
+        </main>
+
+        <main id="tab-analytics" class="w-full max-w-5xl hidden-tab flex flex-col gap-6 fade-in mt-4">
+            <div class="glass-panel rounded-3xl p-6 shadow-2xl flex flex-wrap items-center justify-between gap-4 border border-white/10">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-wide flex items-center gap-3"><span class="text-2xl">📊</span> Insights</h2>
+                    <p class="text-sm text-white/60 mt-1 font-medium">Track your total focus time including overtime.</p>
+                </div>
+                <select id="timeframeFilter" onchange="renderCharts()" class="bg-black/40 border border-white/20 rounded-xl px-4 py-2.5 text-sm font-bold text-white outline-none focus:border-white/50 transition shadow-inner [&>option]:bg-slate-900">
+                    <option value="daily">Daily</option><option value="weekly" selected>Weekly</option>
+                    <option value="monthly">Monthly</option><option value="annually">Annually</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-panel rounded-3xl p-6 flex flex-col items-center border border-white/10 shadow-xl h-[350px] relative">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-white/50 mb-4 absolute top-6 left-6">Distribution</h3>
+                    <div class="w-full h-full pt-8 flex items-center justify-center">
+                        <div class="relative w-full h-full max-w-[300px] max-h-[250px]">
+                            <canvas id="pieChart" class="absolute inset-0 w-full h-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-panel rounded-3xl p-6 flex flex-col items-center border border-white/10 shadow-xl h-[350px] relative">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-white/50 mb-4 absolute top-6 left-6">Total Minutes</h3>
+                    <div class="w-full h-full pt-8 flex items-center justify-center">
+                        <div class="relative w-full h-full max-w-[400px] max-h-[250px]">
+                            <canvas id="barChart" class="absolute inset-0 w-full h-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="fixed bottom-0 left-0 w-full glass-panel border-t border-white/10 p-4 sm:p-5 z-40">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-4 items-center justify-between text-center md:text-left">
+            <div class="flex-1 w-full flex flex-col justify-center">
+                <div class="flex items-center gap-2 justify-center md:justify-start">
+                    <span id="flash-icon" class="text-lg"></span>
+                    <h4 class="font-bold text-lg transition-colors duration-500" id="flash-word">Word</h4>
+                </div>
+                <p class="text-white/80 font-mono text-sm mt-1 bg-black/20 p-2 rounded-lg inline-block self-center md:self-start border border-white/5" id="flash-phrase">Phrase</p>
+            </div>
+            <div class="flex-1 w-full md:border-l border-white/10 md:pl-6 flex items-center justify-center md:justify-start">
+                <p class="text-sm text-white/70 italic leading-relaxed" id="flash-meaning">Meaning</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-8 left-1/2 transform -translate-x-1/2 glass-panel border border-white/20 text-white px-8 py-3 rounded-full shadow-2xl text-sm font-bold z-50 flex items-center gap-2">
+        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span id="toastMsg">Success</span>
+    </div>
+
+    <script>
+        let storageAvailable = false;
+        let memoryStore = {};
+        try {
+            const testKey = '__pomo_test__';
+            window.localStorage.setItem(testKey, testKey);
+            window.localStorage.removeItem(testKey);
+            storageAvailable = true;
+        } catch (e) {
+            console.warn("localStorage disabled. Using in-memory fallback.");
+        }
+
+        const SafeStore = {
+            get: (key) => {
+                if (storageAvailable) {
+                    try { return window.localStorage.getItem(key) || memoryStore[key] || null; } 
+                    catch(e) { return memoryStore[key] || null; }
+                }
+                return memoryStore[key] || null;
+            },
+            set: (key, value) => {
+                memoryStore[key] = value;
+                if (storageAvailable) {
+                    try { window.localStorage.setItem(key, value); } catch(e) {}
+                }
+            }
+        };
+
+        const THEMES = {
+            french: { 
+                name: 'French', icon: '🇫🇷', color: '#c8963e', bg: '#1c1511', 
+                doodles: ['🥐', '🗼', '🍷', '🥖', '🎨', '🧀'],
+                labels: { focus: 'Dans ma bulle', short: 'Petite pause', long: 'Quartier libre' },
+                flashcard: { word: 'Flâner', phrase: 'Je vais flâner dans les rues de Paris.', meaning: 'To stroll aimlessly but enjoyably, soaking in the surroundings.' }
+            },
+            german: { 
+                name: 'German', icon: '🇩🇪', color: '#f1c40f', bg: '#141414', 
+                doodles: ['🥨', '🍺', '🏰', '🕰️', '🌭', '🏔️'],
+                labels: { focus: 'Im Tunnel', short: 'Kaffeepause', long: 'Feierabend' },
+                flashcard: { word: 'Verschlimmbessern', phrase: 'Er hat das Projekt verschlimmbessert.', meaning: 'To accidentally make something worse while trying to improve it.' }
+            },
+            korean: { 
+                name: 'Korean', icon: '🇰🇷', color: '#f72585', bg: '#100a17', 
+                doodles: ['🍜', '🏯', '🫰', '🍚', '🥢', '🎎'],
+                labels: { focus: '열공 모드 (Hard Study)', short: '숨 고르기 (Catch Breath)', long: '휴식 시간 (Rest Time)' },
+                flashcard: { word: '눈치 (Nunchi)', phrase: '그는 눈치가 빠르다.', meaning: 'The subtle art and ability of assessing others\' moods and social situations.' }
+            },
+            mandarin: { 
+                name: 'Mandarin', icon: '🇨🇳', color: '#e74c3c', bg: '#1a1313', 
+                doodles: ['🏮', '🐉', '🍵', '🥟', '🐼', '🧧'],
+                labels: { focus: '专心致志 (Focus)', short: '喘口气 (Breather)', long: '劳逸结合 (Balance)' },
+                flashcard: { word: '加油 (Jiāyóu)', phrase: '考试加油！', meaning: 'Literally "add oil"; used as an encouragement meaning "Come on!" or "You can do it!".' }
+            },
+            physics: { 
+                name: 'Physics/Math', icon: '⚛️', color: '#38bdf8', bg: '#0b1120', 
+                doodles: ['∑', 'π', 'E=mc²', '∆', '√', '∞'],
+                labels: { focus: 'Deep Work', short: 'Short Break', long: 'Long Break' },
+                flashcard: { word: 'Quotient Rule', phrase: "(u/v)' = (u(1)v - uv(1)) / v²", meaning: 'A formal rule for differentiating problems where one function is divided by another, using u(1) and v(1) as derivatives.' }
+            },
+            science: { 
+                name: 'Science', icon: '🧪', color: '#34d399', bg: '#081c15', 
+                doodles: ['🔬', '🧬', '🔭', '⚗️', '🦠', '⚛️'],
+                labels: { focus: 'Research Phase', short: 'Short Break', long: 'System Reset' },
+                flashcard: { word: 'Entropy', phrase: 'ΔS ≥ 0', meaning: 'The measure of a system\'s thermal energy per unit temperature that is unavailable for doing useful work; degree of disorder.' }
+            }
+        };
+
+        let activeTab = 'timer';
+        let activeTheme = 'french';
+        let isMuted = false;
+
+        const MODE_SEC = { focus: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
+        let timerMode = 'focus';
+        let timeLeft = MODE_SEC.focus;
+        let isRunning = false;
+        let isOvertime = false;
+        let overtimeElapsed = 0;
+        let timerInterval = null;
+        let completedSessions = 0;
+
+        let scheduleData = [];
+        let analyticsLog = [];
+
+        const savedSched = SafeStore.get('pomo_sched');
+        if (savedSched) scheduleData = JSON.parse(savedSched);
+        const savedLog = SafeStore.get('pomo_log');
+        if (savedLog) analyticsLog = JSON.parse(savedLog);
+        const savedSessions = SafeStore.get('pomo_sessions');
+        if (savedSessions) completedSessions = parseInt(savedSessions, 10) || 0;
+
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if(AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playClickSound() {
+            if (!audioCtx || isMuted) return;
+            try {
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, t);
+                osc.frequency.exponentialRampToValueAtTime(200, t + 0.05);
+                gain.gain.setValueAtTime(0.05, t); 
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                
+                osc.start(t); osc.stop(t + 0.05);
+            } catch(e) { }
+        }
+
+        document.addEventListener('click', (e) => {
+            initAudio();
+            if(e.target.closest('#muteBtnDesktop') || e.target.closest('#muteBtnMobile')) return;
+            playClickSound();
+        });
+
+        function toggleMute() {
+            initAudio();
+            isMuted = !isMuted;
+            const onIcons = document.querySelectorAll('#icon-sound-on-desktop, #icon-sound-on-mobile');
+            const offIcons = document.querySelectorAll('#icon-sound-off-desktop, #icon-sound-off-mobile');
+            
+            if (isMuted) {
+                onIcons.forEach(el => el.classList.add('hidden'));
+                offIcons.forEach(el => el.classList.remove('hidden'));
+                showToast("UI sounds muted (Alarms will still play)");
+            } else {
+                onIcons.forEach(el => el.classList.remove('hidden'));
+                offIcons.forEach(el => el.classList.add('hidden'));
+                showToast("UI sounds active");
+            }
+        }
+        document.getElementById('muteBtnDesktop').addEventListener('click', toggleMute);
+        document.getElementById('muteBtnMobile').addEventListener('click', toggleMute);
+
+        function playTimerSound(type) {
+            if (!audioCtx) return;
+            try {
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'end') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, t); 
+                    osc.frequency.exponentialRampToValueAtTime(880, t + 0.1);
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.4, t + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
+                    osc.start(t); osc.stop(t + 1.1);
+                } else if (type === 'soft') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(880, t);
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.15, t + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+                    osc.start(t); osc.stop(t + 0.6);
+                }
+            } catch(e) { console.warn("Audio play failed", e); }
+        }
+
+        function updateLabelsAndFlashcards() {
+            const theme = THEMES[activeTheme];
+            
+            document.getElementById('mode-focus').innerText = theme.labels.focus;
+            document.getElementById('mode-shortBreak').innerText = theme.labels.short;
+            document.getElementById('mode-longBreak').innerText = theme.labels.long;
+
+            document.getElementById('flash-icon').innerText = theme.icon;
+            document.getElementById('flash-word').innerText = theme.flashcard.word;
+            document.getElementById('flash-word').style.color = theme.color;
+            document.getElementById('flash-phrase').innerText = theme.flashcard.phrase;
+            document.getElementById('flash-meaning').innerText = theme.flashcard.meaning;
+        }
+
+        function updateUIPlayPause() {
+            document.getElementById('icon-play').classList.toggle('hidden', isRunning);
+            document.getElementById('icon-pause').classList.toggle('hidden', !isRunning);
+            
+            const btn = document.getElementById('btn-play-pause');
+            if(isRunning) {
+                btn.style.boxShadow = `0 0 40px ${THEMES[activeTheme].color}40`;
+            } else {
+                btn.style.boxShadow = '';
+            }
+        }
+
+        function setTimerMode(mode) {
+            // Save progress if switching away from a partially/fully completed focus session
+            if (timerMode === 'focus' && mode !== 'focus' && (timeLeft < MODE_SEC.focus || isOvertime)) {
+                const totalSec = isOvertime ? (MODE_SEC.focus + overtimeElapsed) : (MODE_SEC.focus - timeLeft);
+                const mins = Math.max(1, Math.round(totalSec / 60));
+                
+                analyticsLog.push({ id: Date.now(), timestamp: Date.now(), theme: activeTheme, minutes: mins });
+                SafeStore.set('pomo_log', JSON.stringify(analyticsLog));
+                showToast(`Logged ${mins} focus minutes!`);
+                
+                completedSessions++;
+                SafeStore.set('pomo_sessions', completedSessions.toString());
+                document.getElementById('sessionCounter').innerText = `Session #${completedSessions + 1}`;
+            }
+
+            timerMode = mode;
+            isRunning = false;
+            isOvertime = false;
+            overtimeElapsed = 0;
+            timeLeft = MODE_SEC[mode];
+            clearInterval(timerInterval);
+
+            ['focus', 'shortBreak', 'longBreak'].forEach(m => {
+                const btn = document.getElementById(`mode-${m}`);
+                if (m === mode) {
+                    btn.className = 'flex-1 min-w-[120px] py-2.5 px-2 text-xs md:text-sm font-bold rounded-xl transition shadow text-white';
+                    btn.style.backgroundColor = THEMES[activeTheme].color;
+                } else {
+                    btn.className = 'flex-1 min-w-[120px] py-2.5 px-2 text-xs md:text-sm font-bold rounded-xl transition hover:bg-white/10 bg-transparent text-white/70';
+                    btn.style.backgroundColor = 'transparent';
+                }
+            });
+
+            document.getElementById('overtimeBadge').classList.add('hidden');
+            const circle = document.getElementById('progressCircle');
+            circle.classList.remove('overtime-pulse');
+            
+            updateUIPlayPause();
+            renderTime();
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                isRunning = false;
+                clearInterval(timerInterval);
+                updateUIPlayPause();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            isRunning = true;
+            updateUIPlayPause();
+
+            timerInterval = setInterval(() => {
+                if (!isOvertime) {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                    } else {
+                        isOvertime = true;
+                        overtimeElapsed = 0;
+                        document.getElementById('overtimeBadge').classList.remove('hidden');
+                        document.getElementById('progressCircle').classList.add('overtime-pulse');
+                        playTimerSound('end');
+                    }
+                } else {
+                    overtimeElapsed++;
+                    if (overtimeElapsed % 60 === 0) playTimerSound('soft'); 
+                }
+                renderTime();
+            }, 1000);
+        }
+
+        function resetTimer() {
+            // Resetting active time without logging a finished session
+            setTimerMode(timerMode);
+        }
+
+        function renderTime() {
+            let m, s, str;
+            const timeDisp = document.getElementById('timeDisplay');
+            const circle = document.getElementById('progressCircle');
+            const CIRCUMFERENCE = 295.31; 
+            
+            if (isOvertime) {
+                m = Math.floor(overtimeElapsed / 60); s = overtimeElapsed % 60;
+                str = `+${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                
+                timeDisp.classList.add('text-amber-400');
+                circle.style.strokeDashoffset = 0;
+            } else {
+                m = Math.floor(timeLeft / 60); s = timeLeft % 60;
+                str = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                
+                timeDisp.classList.remove('text-amber-400');
+                
+                const progress = timeLeft / MODE_SEC[timerMode];
+                circle.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+                if(!circle.classList.contains('overtime-pulse')){
+                    circle.style.stroke = THEMES[activeTheme].color;
+                }
+            }
+            timeDisp.innerText = str;
+        }
+
+        function switchTab(tabId) {
+            activeTab = tabId;
+            ['timer', 'schedule', 'analytics'].forEach(t => {
+                const btn = document.getElementById(`nav-${t}`);
+                const view = document.getElementById(`tab-${t}`);
+                if (t === tabId) {
+                    btn.classList.add('bg-white/20', 'shadow', 'text-white');
+                    btn.classList.remove('hover:bg-white/10', 'text-white/70');
+                    view.classList.remove('hidden-tab');
+                    
+                    // Trigger reflow to restart fade-in animation
+                    void view.offsetWidth;
+                    view.style.animation = 'none';
+                    void view.offsetWidth;
+                    view.style.animation = null;
+                } else {
+                    btn.classList.remove('bg-white/20', 'shadow', 'text-white');
+                    btn.classList.add('hover:bg-white/10', 'text-white/70');
+                    view.classList.add('hidden-tab');
+                }
+            });
+            if (tabId === 'schedule') renderSchedule();
+            if (tabId === 'analytics') setTimeout(renderCharts, 50); 
+        }
+
+        function setTheme(key) {
+            activeTheme = key;
+            const theme = THEMES[key];
+            document.body.style.backgroundColor = theme.bg;
+
+            document.querySelectorAll('.theme-btn').forEach(b => {
+                b.classList.remove('bg-white/20', 'border-white/40');
+                b.classList.add('glass-btn');
+            });
+            const activeBtn = document.getElementById(`theme-${key}`);
+            activeBtn.classList.add('bg-white/20', 'border-white/40');
+            activeBtn.classList.remove('glass-btn');
+
+            updateLabelsAndFlashcards();
+            
+            if (!isOvertime) {
+                document.getElementById('progressCircle').style.stroke = theme.color;
+            }
+            
+            // Update active mode button color
+            const activeModeBtn = document.getElementById(`mode-${timerMode}`);
+            if (activeModeBtn) {
+                activeModeBtn.style.backgroundColor = theme.color;
+            }
+
+            spawnDoodles(); 
+        }
+
+        function addToSchedule() {
+            const day = document.getElementById('schedDay').value;
+            const theme = document.getElementById('schedTheme').value;
+            const hours = parseFloat(document.getElementById('schedHours').value);
+            if (!hours || hours <= 0) return showToast("Please enter valid hours");
+
+            scheduleData.push({ id: Date.now(), day, theme, hours });
+            SafeStore.set('pomo_sched', JSON.stringify(scheduleData));
+            document.getElementById('schedHours').value = '';
+            renderSchedule();
+            showToast("Block added to schedule");
+        }
+
+        function delSched(id) {
+            scheduleData = scheduleData.filter(i => i.id !== id);
+            SafeStore.set('pomo_sched', JSON.stringify(scheduleData));
+            renderSchedule();
+        }
+
+        function runFromSched(key) {
+            setTheme(key);
+            switchTab('timer');
+            setTimerMode('focus');
+        }
+
+        function renderSchedule() {
+            const c = document.getElementById('scheduleContainer');
+            const msg = document.getElementById('emptyScheduleMsg');
+            Array.from(c.children).forEach(el => { if(el.id !== 'emptyScheduleMsg') el.remove(); });
+
+            if (scheduleData.length === 0) { msg.style.display = 'block'; return; }
+            msg.style.display = 'none';
+
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            days.forEach(day => {
+                const items = scheduleData.filter(i => i.day === day);
+                if (items.length === 0) return;
+
+                const div = document.createElement('div');
+                div.className = 'mb-6';
+                let html = items.map(i => `
+                    <div class="flex items-center justify-between glass-btn p-4 rounded-2xl mt-3 shadow-md group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-inner border border-white/10 bg-black/20" style="color: ${THEMES[i.theme].color}">${THEMES[i.theme].icon}</div>
+                            <div>
+                                <p class="text-sm font-bold tracking-wide">${THEMES[i.theme].name}</p>
+                                <p class="text-xs font-medium text-white/50 mt-0.5">${i.hours}h planned block</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <button onclick="runFromSched('${i.theme}')" class="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-xs font-bold transition">Start</button>
+                            <button onclick="delSched(${i.id})" class="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                        </div>
+                    </div>
+                `).join('');
+                div.innerHTML = `<h4 class="text-xs font-bold uppercase tracking-widest text-white/40 border-b border-white/5 pb-2 ml-1">${day}</h4>${html}`;
+                c.appendChild(div);
+            });
+        }
+
+        function getChartData() {
+            const filter = document.getElementById('timeframeFilter').value;
+            const now = Date.now();
+            let limit = now - (7 * 86400000);
+            if (filter === 'daily') limit = now - 86400000;
+            if (filter === 'monthly') limit = now - (30 * 86400000);
+            if (filter === 'annually') limit = now - (365 * 86400000);
+
+            const filtered = analyticsLog.filter(l => l.timestamp >= limit);
+            const totals = {};
+            Object.keys(THEMES).forEach(k => totals[k] = 0);
+            filtered.forEach(l => { if(totals[l.theme] !== undefined) totals[l.theme] += l.minutes; });
+            return totals;
+        }
+
+        function setupHighDPICanvas(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const parent = canvas.parentElement;
+            const rect = parent.getBoundingClientRect();
+            
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            
+            return { ctx, width: rect.width, height: rect.height };
+        }
+
+        function renderCharts() {
+            if (activeTab !== 'analytics') return;
+            const data = getChartData();
+
+            // Pie Chart
+            const pieSetup = setupHighDPICanvas('pieChart');
+            const pCtx = pieSetup.ctx;
+            const pW = pieSetup.width;
+            const pH = pieSetup.height;
+            
+            pCtx.clearRect(0, 0, pW, pH);
+            const total = Object.values(data).reduce((a,b)=>a+b,0);
+            
+            const cx = pW * 0.35; 
+            const cy = pH / 2;
+            const r = Math.min(cx, cy) - 20;
+            let start = -Math.PI/2;
+            let legendY = (pH - (Object.keys(data).filter(k => data[k]>0).length * 25)) / 2;
+            if(legendY < 10) legendY = 20;
+
+            if (total === 0) {
+                pCtx.fillStyle = 'rgba(255,255,255,0.05)';
+                pCtx.beginPath(); pCtx.arc(pW/2, pH/2, r, 0, Math.PI*2); pCtx.fill();
+                pCtx.fillStyle = 'rgba(255,255,255,0.4)'; pCtx.font = 'bold 12px sans-serif'; 
+                pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
+                pCtx.fillText('No Data', pW/2, pH/2);
+            } else {
+                Object.entries(data).forEach(([k,v]) => {
+                    if (v > 0) {
+                        const slice = (v/total)*Math.PI*2;
+                        pCtx.beginPath(); pCtx.moveTo(cx, cy);
+                        pCtx.arc(cx, cy, r, start, start+slice); pCtx.closePath();
+                        pCtx.fillStyle = THEMES[k].color; pCtx.fill();
+                        
+                        pCtx.lineWidth = 1; pCtx.strokeStyle = '#1e293b'; pCtx.stroke();
+                        start += slice;
+
+                        const legX = pW * 0.7;
+                        pCtx.beginPath(); pCtx.roundRect(legX, legendY - 12, 14, 14, 3);
+                        pCtx.fillStyle = THEMES[k].color; pCtx.fill();
+                        
+                        pCtx.fillStyle = '#fff'; pCtx.font = '600 12px sans-serif'; pCtx.textAlign = 'left'; pCtx.textBaseline = 'alphabetic';
+                        pCtx.fillText(`${THEMES[k].icon} ${Math.round((v/total)*100)}%`, legX + 22, legendY);
+                        legendY += 25;
+                    }
+                });
+            }
+
+            // Bar Chart
+            const barSetup = setupHighDPICanvas('barChart');
+            const bCtx = barSetup.ctx;
+            const bW = barSetup.width;
+            const bH = barSetup.height;
+
+            bCtx.clearRect(0, 0, bW, bH);
+            const vals = Object.values(data);
+            const max = Math.max(...vals, 10);
+            
+            const padX = 30;
+            const padY = 30;
+            const chartH = bH - padY * 2;
+            const chartW = bW - padX * 2;
+
+            bCtx.strokeStyle = 'rgba(255,255,255,0.1)'; bCtx.lineWidth = 2;
+            bCtx.beginPath(); bCtx.moveTo(padX, bH - padY); bCtx.lineTo(bW - padX, bH - padY); bCtx.stroke();
+
+            const keys = Object.keys(data);
+            const gap = chartW / keys.length;
+            const barW = gap * 0.5;
+
+            keys.forEach((k, i) => {
+                const h = (data[k]/max) * chartH;
+                const x = padX + (i*gap) + (gap-barW)/2;
+                const y = bH - padY - h;
+
+                if (data[k] > 0) {
+                    bCtx.fillStyle = THEMES[k].color;
+                    bCtx.beginPath(); bCtx.roundRect(x, y, barW, h, [4, 4, 0, 0]); bCtx.fill();
+                    
+                    bCtx.fillStyle = '#fff'; bCtx.font = 'bold 11px sans-serif'; bCtx.textAlign = 'center';
+                    bCtx.fillText(data[k], x + barW/2, y - 6);
+                }
+                bCtx.fillStyle = 'rgba(255,255,255,0.6)'; bCtx.font = '14px sans-serif'; bCtx.textAlign = 'center';
+                bCtx.fillText(THEMES[k].icon, x + barW/2, bH - padY + 20);
+            });
+        }
+
+        const bgCanvas = document.getElementById('doodleCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        let doodles = [];
+        let animFrameId = null;
+
+        class Doodle {
+            constructor(w, h, themeData) {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.size = Math.random() * 20 + 20; 
+                this.rotation = Math.random() * Math.PI * 2;
+                
+                this.dx = (Math.random() - 0.5) * 0.4;
+                this.dy = (Math.random() - 0.5) * 0.4;
+                this.dr = (Math.random() - 0.5) * 0.01;
+                
+                this.char = themeData.doodles[Math.floor(Math.random() * themeData.doodles.length)];
+                this.color = themeData.color;
+            }
+
+            update(w, h) {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.rotation += this.dr;
+
+                if (this.x < -50) this.x = w + 50;
+                if (this.x > w + 50) this.x = -50;
+                if (this.y < -50) this.y = h + 50;
+                if (this.y > h + 50) this.y = -50;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = 0.06; 
+                ctx.font = `${this.size}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                
+                ctx.fillText(this.char, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        function resizeBackgroundCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            bgCanvas.width = window.innerWidth * dpr;
+            bgCanvas.height = window.innerHeight * dpr;
+            bgCtx.scale(dpr, dpr);
+            if(activeTab === 'analytics') renderCharts();
+        }
+
+        function spawnDoodles() {
+            const themeData = THEMES[activeTheme];
+            const count = Math.min(Math.floor((window.innerWidth * window.innerHeight) / 15000), 80);
+            
+            doodles = [];
+            for (let i = 0; i < count; i++) {
+                doodles.push(new Doodle(window.innerWidth, window.innerHeight, themeData));
+            }
+        }
+
+        function animateDoodles() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            
+            doodles.forEach(d => {
+                d.update(w, h);
+                d.draw(bgCtx);
+            });
+            
+            animFrameId = requestAnimationFrame(animateDoodles);
+        }
+
+        window.addEventListener('resize', () => {
+            resizeBackgroundCanvas();
+            spawnDoodles();
+        });
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        window.onload = () => {
+            document.getElementById('sessionCounter').innerText = `Session #${completedSessions + 1}`;
+            setTheme('french'); 
+            setTimerMode('focus');
+            resizeBackgroundCanvas();
+            spawnDoodles();
+            animateDoodles();
+        };
+    </script>
+</body>
+</html>
