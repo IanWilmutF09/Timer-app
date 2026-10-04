@@ -222,7 +222,7 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l5 5V5l-5 5H5z"></path></svg>
                     </button>
                 </div>
-                <p class="text-white/80 font-mono text-sm mt-2 bg-black/20 p-2 rounded-lg inline-block self-center md:self-start border border-white/5" id="flash-phrase">Loading phrase...</p>
+                <p class="text-white/80 font-mono text-sm mt-2 bg-black/20 p-2 rounded-lg inline-block self-center md:self-start border border-white/5" id="flash-phrase">Fetching phrase...</p>
             </div>
             
             <div class="flex-1 w-full md:border-l border-white/10 md:pl-6 flex flex-col items-center justify-center md:items-start gap-3">
@@ -231,7 +231,7 @@
                 <!-- Refresh New Card Button -->
                 <button onclick="updateLabelsAndFlashcards()" class="text-xs font-bold px-4 py-2 rounded-lg glass-btn flex items-center gap-2 hover:bg-white/10 transition mt-1 shadow-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    New Card
+                    New Phrase
                 </button>
             </div>
 
@@ -245,6 +245,11 @@
     </div>
 
     <script>
+        // --- Safari TTS Initialization (Crucial for iOS Voices) ---
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+        }
+
         let storageAvailable = false;
         let memoryStore = {};
         try {
@@ -252,9 +257,7 @@
             window.localStorage.setItem(testKey, testKey);
             window.localStorage.removeItem(testKey);
             storageAvailable = true;
-        } catch (e) {
-            console.warn("localStorage disabled.");
-        }
+        } catch (e) { console.warn("localStorage disabled."); }
 
         const SafeStore = {
             get: (key) => {
@@ -321,35 +324,18 @@
             }
         };
 
-        const TTS_LANGS = {
-            french: 'fr-FR',
-            german: 'de-DE',
-            korean: 'ko-KR',
-            mandarin: 'zh-CN'
-        };
+        const TTS_LANGS = { french: 'fr-FR', german: 'de-DE', korean: 'ko-KR', mandarin: 'zh-CN' };
+        const TRANSLATE_LANGS = { french: 'fr', german: 'de', korean: 'ko', mandarin: 'zh-CN' };
 
-        let activeTab = 'timer';
-        let activeTheme = 'french';
-        let isMuted = false;
-
+        let activeTab = 'timer'; let activeTheme = 'french'; let isMuted = false;
         const MODE_SEC = { focus: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
-        let timerMode = 'focus';
-        let timeLeft = MODE_SEC.focus;
-        let isRunning = false;
-        let isOvertime = false;
-        let overtimeElapsed = 0;
-        let timerInterval = null;
-        let completedSessions = 0;
+        let timerMode = 'focus'; let timeLeft = MODE_SEC.focus; let isRunning = false;
+        let isOvertime = false; let overtimeElapsed = 0; let timerInterval = null; let completedSessions = 0;
+        let scheduleData = []; let analyticsLog = [];
 
-        let scheduleData = [];
-        let analyticsLog = [];
-
-        const savedSched = SafeStore.get('pomo_sched');
-        if (savedSched) scheduleData = JSON.parse(savedSched);
-        const savedLog = SafeStore.get('pomo_log');
-        if (savedLog) analyticsLog = JSON.parse(savedLog);
-        const savedSessions = SafeStore.get('pomo_sessions');
-        if (savedSessions) completedSessions = parseInt(savedSessions, 10) || 0;
+        const savedSched = SafeStore.get('pomo_sched'); if (savedSched) scheduleData = JSON.parse(savedSched);
+        const savedLog = SafeStore.get('pomo_log'); if (savedLog) analyticsLog = JSON.parse(savedLog);
+        const savedSessions = SafeStore.get('pomo_sessions'); if (savedSessions) completedSessions = parseInt(savedSessions, 10) || 0;
 
         let audioCtx = null;
         function initAudio() {
@@ -364,13 +350,10 @@
             if (!audioCtx || isMuted) return;
             try {
                 const t = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
                 osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.type = 'sine'; osc.frequency.setValueAtTime(600, t);
-                osc.frequency.exponentialRampToValueAtTime(200, t + 0.05);
-                gain.gain.setValueAtTime(0.05, t); 
-                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, t); osc.frequency.exponentialRampToValueAtTime(200, t + 0.05);
+                gain.gain.setValueAtTime(0.05, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
                 osc.start(t); osc.stop(t + 0.05);
             } catch(e) { }
         }
@@ -382,17 +365,14 @@
         });
 
         function toggleMute() {
-            initAudio();
-            isMuted = !isMuted;
+            initAudio(); isMuted = !isMuted;
             const onIcons = document.querySelectorAll('#icon-sound-on-desktop, #icon-sound-on-mobile');
             const offIcons = document.querySelectorAll('#icon-sound-off-desktop, #icon-sound-off-mobile');
             if (isMuted) {
-                onIcons.forEach(el => el.classList.add('hidden'));
-                offIcons.forEach(el => el.classList.remove('hidden'));
+                onIcons.forEach(el => el.classList.add('hidden')); offIcons.forEach(el => el.classList.remove('hidden'));
                 showToast("UI sounds muted (Alarms will still play)");
             } else {
-                onIcons.forEach(el => el.classList.remove('hidden'));
-                offIcons.forEach(el => el.classList.add('hidden'));
+                onIcons.forEach(el => el.classList.remove('hidden')); offIcons.forEach(el => el.classList.add('hidden'));
                 showToast("UI sounds active");
             }
         }
@@ -402,23 +382,15 @@
         function playTimerSound(type) {
             if (!audioCtx) return;
             try {
-                const t = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
+                const t = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
                 osc.connect(gain); gain.connect(audioCtx.destination);
-
                 if (type === 'end') {
-                    osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, t); 
-                    osc.frequency.exponentialRampToValueAtTime(880, t + 0.1);
-                    gain.gain.setValueAtTime(0, t);
-                    gain.gain.linearRampToValueAtTime(0.4, t + 0.05);
-                    gain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, t); osc.frequency.exponentialRampToValueAtTime(880, t + 0.1);
+                    gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(0.4, t + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, t + 1.0);
                     osc.start(t); osc.stop(t + 1.1);
                 } else if (type === 'soft') {
                     osc.type = 'triangle'; osc.frequency.setValueAtTime(880, t);
-                    gain.gain.setValueAtTime(0, t);
-                    gain.gain.linearRampToValueAtTime(0.15, t + 0.05);
-                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+                    gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(0.15, t + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
                     osc.start(t); osc.stop(t + 0.6);
                 }
             } catch(e) { }
@@ -433,45 +405,46 @@
             document.getElementById('flash-icon').innerText = theme.icon;
 
             const readBtn = document.getElementById('btn-read-aloud');
-            if (TTS_LANGS[activeTheme]) {
-                readBtn.classList.remove('hidden');
-            } else {
-                readBtn.classList.add('hidden');
-            }
+            if (TTS_LANGS[activeTheme]) readBtn.classList.remove('hidden');
+            else readBtn.classList.add('hidden');
 
             document.getElementById('flash-word').innerText = "Loading...";
             document.getElementById('flash-word').style.color = theme.color;
-            document.getElementById('flash-phrase').innerText = "...";
+            document.getElementById('flash-phrase').innerText = "Fetching a new phrase...";
             document.getElementById('flash-meaning').innerText = "...";
 
-            let card;
-            if (TTS_LANGS[activeTheme]) {
+            if (TRANSLATE_LANGS[activeTheme]) {
                 try {
-                    const wikiLangCode = TTS_LANGS[activeTheme].split('-')[0];
-                    const res = await fetch(`https://${wikiLangCode}.wikipedia.org/api/rest_v1/page/random/summary`);
-                    if (!res.ok) throw new Error("API Error");
-                    const data = await res.json();
+                    // 1. Fetch a random, short English quote from the internet
+                    const quoteRes = await fetch('https://dummyjson.com/quotes/random');
+                    const quoteData = await quoteRes.json();
+                    const engQuote = quoteData.quote;
                     
-                    let extract = data.extract || "No phrase available.";
-                    if (extract.length > 140) extract = extract.substring(0, 140) + '...';
+                    // 2. Translate the short quote into the target language
+                    const langPair = `en|${TRANSLATE_LANGS[activeTheme]}`;
+                    const transRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(engQuote)}&langpair=${langPair}`);
+                    const transData = await transRes.json();
                     
-                    card = {
-                        word: data.title,
-                        phrase: extract,
-                        meaning: data.description || "Wikipedia Article"
-                    };
+                    const translatedText = transData.responseData.translatedText;
+
+                    document.getElementById('flash-word').innerText = "Phrase";
+                    document.getElementById('flash-phrase').innerText = translatedText;
+                    document.getElementById('flash-meaning').innerText = engQuote; // Exact English Meaning
+
                 } catch(e) {
                     const cards = theme.flashcards;
-                    card = cards[Math.floor(Math.random() * cards.length)];
+                    const card = cards[Math.floor(Math.random() * cards.length)];
+                    document.getElementById('flash-word').innerText = card.word;
+                    document.getElementById('flash-phrase').innerText = card.phrase;
+                    document.getElementById('flash-meaning').innerText = card.meaning;
                 }
             } else {
                 const cards = theme.flashcards;
-                card = cards[Math.floor(Math.random() * cards.length)];
+                const card = cards[Math.floor(Math.random() * cards.length)];
+                document.getElementById('flash-word').innerText = card.word;
+                document.getElementById('flash-phrase').innerText = card.phrase;
+                document.getElementById('flash-meaning').innerText = card.meaning;
             }
-
-            document.getElementById('flash-word').innerText = card.word;
-            document.getElementById('flash-phrase').innerText = card.phrase;
-            document.getElementById('flash-meaning').innerText = card.meaning;
         }
 
         function readAloudFlashcard() {
@@ -479,10 +452,21 @@
             const phraseText = document.getElementById('flash-phrase').innerText;
             
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
+                window.speechSynthesis.cancel(); // Stop any current audio
+                
                 const utterance = new SpeechSynthesisUtterance(phraseText);
-                utterance.lang = TTS_LANGS[activeTheme];
+                const langCode = TTS_LANGS[activeTheme];
+                utterance.lang = langCode;
                 utterance.rate = 0.85; 
+
+                // Crucial iOS fix: Force Safari to use the specific regional voice rather than default English
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    const nativeVoice = voices.find(v => v.lang.replace('_', '-') === langCode) 
+                                     || voices.find(v => v.lang.startsWith(langCode.substring(0, 2)));
+                    if (nativeVoice) utterance.voice = nativeVoice;
+                }
+
                 window.speechSynthesis.speak(utterance);
             } else {
                 showToast("Audio not supported on this device.");
@@ -661,8 +645,7 @@
                 const items = scheduleData.filter(i => i.day === day);
                 if (items.length === 0) return;
 
-                const div = document.createElement('div');
-                div.className = 'mb-6';
+                const div = document.createElement('div'); div.className = 'mb-6';
                 let html = items.map(i => `
                     <div class="flex items-center justify-between glass-btn p-4 rounded-2xl mt-3 shadow-md group">
                         <div class="flex items-center gap-4">
@@ -692,24 +675,15 @@
             if (filter === 'annually') limit = now - (365 * 86400000);
 
             const filtered = analyticsLog.filter(l => l.timestamp >= limit);
-            const totals = {};
-            Object.keys(THEMES).forEach(k => totals[k] = 0);
+            const totals = {}; Object.keys(THEMES).forEach(k => totals[k] = 0);
             filtered.forEach(l => { if(totals[l.theme] !== undefined) totals[l.theme] += l.minutes; });
             return totals;
         }
 
         function setupHighDPICanvas(canvasId) {
-            const canvas = document.getElementById(canvasId);
-            const parent = canvas.parentElement;
-            const rect = parent.getBoundingClientRect();
-            
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            
-            const ctx = canvas.getContext('2d');
-            ctx.scale(dpr, dpr);
-            
+            const canvas = document.getElementById(canvasId); const parent = canvas.parentElement; const rect = parent.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1; canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+            const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
             return { ctx, width: rect.width, height: rect.height };
         }
 
@@ -722,10 +696,8 @@
             pCtx.clearRect(0, 0, pW, pH);
             const total = Object.values(data).reduce((a,b)=>a+b,0);
             
-            const cx = pW * 0.35; const cy = pH / 2; const r = Math.min(cx, cy) - 20;
-            let start = -Math.PI/2;
-            let legendY = (pH - (Object.keys(data).filter(k => data[k]>0).length * 25)) / 2;
-            if(legendY < 10) legendY = 20;
+            const cx = pW * 0.35; const cy = pH / 2; const r = Math.min(cx, cy) - 20; let start = -Math.PI/2;
+            let legendY = (pH - (Object.keys(data).filter(k => data[k]>0).length * 25)) / 2; if(legendY < 10) legendY = 20;
 
             if (total === 0) {
                 pCtx.fillStyle = 'rgba(255,255,255,0.05)'; pCtx.beginPath(); pCtx.arc(pW/2, pH/2, r, 0, Math.PI*2); pCtx.fill();
@@ -737,16 +709,10 @@
                         const slice = (v/total)*Math.PI*2;
                         pCtx.beginPath(); pCtx.moveTo(cx, cy); pCtx.arc(cx, cy, r, start, start+slice); pCtx.closePath();
                         pCtx.fillStyle = THEMES[k].color; pCtx.fill();
-                        pCtx.lineWidth = 1; pCtx.strokeStyle = '#1e293b'; pCtx.stroke();
-                        start += slice;
-
-                        const legX = pW * 0.7;
-                        pCtx.beginPath(); pCtx.roundRect(legX, legendY - 12, 14, 14, 3);
-                        pCtx.fillStyle = THEMES[k].color; pCtx.fill();
-                        
+                        pCtx.lineWidth = 1; pCtx.strokeStyle = '#1e293b'; pCtx.stroke(); start += slice;
+                        const legX = pW * 0.7; pCtx.beginPath(); pCtx.roundRect(legX, legendY - 12, 14, 14, 3); pCtx.fillStyle = THEMES[k].color; pCtx.fill();
                         pCtx.fillStyle = '#fff'; pCtx.font = '600 12px sans-serif'; pCtx.textAlign = 'left'; pCtx.textBaseline = 'alphabetic';
-                        pCtx.fillText(`${THEMES[k].icon} ${Math.round((v/total)*100)}%`, legX + 22, legendY);
-                        legendY += 25;
+                        pCtx.fillText(`${THEMES[k].icon} ${Math.round((v/total)*100)}%`, legX + 22, legendY); legendY += 25;
                     }
                 });
             }
@@ -755,11 +721,8 @@
             const bCtx = barSetup.ctx; const bW = barSetup.width; const bH = barSetup.height;
             bCtx.clearRect(0, 0, bW, bH);
             const vals = Object.values(data); const max = Math.max(...vals, 10);
-            
             const padX = 30; const padY = 30; const chartH = bH - padY * 2; const chartW = bW - padX * 2;
-            bCtx.strokeStyle = 'rgba(255,255,255,0.1)'; bCtx.lineWidth = 2;
-            bCtx.beginPath(); bCtx.moveTo(padX, bH - padY); bCtx.lineTo(bW - padX, bH - padY); bCtx.stroke();
-
+            bCtx.strokeStyle = 'rgba(255,255,255,0.1)'; bCtx.lineWidth = 2; bCtx.beginPath(); bCtx.moveTo(padX, bH - padY); bCtx.lineTo(bW - padX, bH - padY); bCtx.stroke();
             const keys = Object.keys(data); const gap = chartW / keys.length; const barW = gap * 0.5;
             keys.forEach((k, i) => {
                 const h = (data[k]/max) * chartH; const x = padX + (i*gap) + (gap-barW)/2; const y = bH - padY - h;
@@ -771,16 +734,14 @@
             });
         }
 
-        const bgCanvas = document.getElementById('doodleCanvas');
-        const bgCtx = bgCanvas.getContext('2d');
+        const bgCanvas = document.getElementById('doodleCanvas'); const bgCtx = bgCanvas.getContext('2d');
         let doodles = []; let animFrameId = null;
 
         class Doodle {
             constructor(w, h, themeData) {
                 this.x = Math.random() * w; this.y = Math.random() * h;
                 this.size = Math.random() * 20 + 20; this.rotation = Math.random() * Math.PI * 2;
-                this.dx = (Math.random() - 0.5) * 0.4; this.dy = (Math.random() - 0.5) * 0.4;
-                this.dr = (Math.random() - 0.5) * 0.01;
+                this.dx = (Math.random() - 0.5) * 0.4; this.dy = (Math.random() - 0.5) * 0.4; this.dr = (Math.random() - 0.5) * 0.01;
                 this.char = themeData.doodles[Math.floor(Math.random() * themeData.doodles.length)];
                 this.color = themeData.color;
             }
@@ -806,10 +767,8 @@
         }
 
         function spawnDoodles() {
-            const themeData = THEMES[activeTheme];
-            const count = Math.min(Math.floor((window.innerWidth * window.innerHeight) / 15000), 80);
-            doodles = [];
-            for (let i = 0; i < count; i++) doodles.push(new Doodle(window.innerWidth, window.innerHeight, themeData));
+            const themeData = THEMES[activeTheme]; const count = Math.min(Math.floor((window.innerWidth * window.innerHeight) / 15000), 80);
+            doodles = []; for (let i = 0; i < count; i++) doodles.push(new Doodle(window.innerWidth, window.innerHeight, themeData));
         }
 
         function animateDoodles() {
@@ -824,8 +783,7 @@
         function showToast(msg) {
             const t = document.getElementById('toast');
             document.getElementById('toastMsg').innerText = msg;
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 3000);
+            t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000);
         }
 
         window.onload = () => {
